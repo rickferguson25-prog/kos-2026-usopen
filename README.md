@@ -4,18 +4,17 @@ Complete replacement repo for the Netlify app.
 
 ## Version
 
-v107
+v108
 
 ## Changes in this version
 
-- Removed the large KOS logo from the top/header.
-- Removed "Powered by TRG" from the top/header.
-- Kept KOS logo and "Powered by TRG" in the footer.
-- Removed the on-page CSV column instruction text.
-- Requires Admin PIN before CSV upload is allowed.
-- CSV upload now auto-saves imported groups to Netlify storage.
-- Auto-refresh no longer overwrites unsaved local changes.
-- Force Reload button can still reload saved pool data from storage.
+- Admin functions are unavailable until an Admin PIN is entered: CSV upload, Add Group, Save Pool, Clear Groups, Remove, fee/penalty fields.
+- The Admin PIN is still verified by the Netlify function when Save Pool/CSV upload saves.
+- Added a hover/focus bubble explaining Risk.
+- Risk means the number of golfers in the group with status Missed Cut, Withdrawn, or Not Found.
+- Group labels from CSV upload are preserved exactly.
+- The Pool Leaderboard no longer auto-increments missing/displayed group numbers.
+- Missing group labels display as "Unlabeled Group" instead of Group 1, Group 2, etc.
 
 ## CSV format
 
@@ -68,11 +67,11 @@ Netlify -> Deploys -> Trigger deploy -> Clear cache and deploy site
 
 Then open:
 
-https://your-site-name.netlify.app/?v=107
+https://your-site-name.netlify.app/?v=108
 
 ## Test endpoints
 
 /api/pool
 /api/live-leaderboard
-/app.js?v=107
-/assets/KOS_Logo.jpeg?v=107
+/app.js?v=108
+/assets/KOS_Logo.jpeg?v=108

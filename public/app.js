@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "v107";
+  const VERSION = "v108";
   console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
   let pool = {
@@ -64,6 +64,29 @@
 
   function adminPinProvided() {
     return Boolean(norm($("adminPin")?.value));
+  }
+
+  function updateAdminAvailability() {
+    const enabled = adminPinProvided();
+    document.querySelectorAll(".admin-only").forEach(el => {
+      el.disabled = !enabled;
+    });
+
+    if (!enabled) {
+      show("Enter the Admin PIN to enable admin functions.", false);
+    } else {
+      const msg = $("message")?.textContent || "";
+      if (msg === "Enter the Admin PIN to enable admin functions.") {
+        show("Admin functions enabled. The PIN will be verified when you save or upload.");
+      }
+    }
+  }
+
+  function requireAdminPin(actionName = "this admin function") {
+    if (adminPinProvided()) return true;
+    show(`Admin PIN is required to use ${actionName}.`, true);
+    updateAdminAvailability();
+    return false;
   }
 
   async function parseResponse(res) {
@@ -168,6 +191,10 @@
     return { ...p, total };
   }
 
+  function displayGroupLabel(group) {
+    return norm(group.label) || "Unlabeled Group";
+  }
+
   function leaderboardRows() {
     return (pool.groups || []).map((g, i) => {
       const golfers = (g.golfers || []).map(effectiveGolfer);
@@ -187,7 +214,7 @@
   function renderDashboard(rows) {
     const leader = rows[0];
 
-    setText("leaderName", leader ? `${leader.entrant} - ${leader.label}` : "—");
+    setText("leaderName", leader ? `${leader.entrant} - ${displayGroupLabel(leader)}` : "—");
     setText("leaderScore", leader ? scoreText(leader.total) : "—");
     setText("groupCount", (pool.groups || []).length);
     setText("prizePool", money((pool.groups || []).length * Number(pool.feePerGroup || 20)));
@@ -205,7 +232,7 @@
         <td><strong>${i + 1}</strong></td>
         <td>
           <strong>${html(g.entrant)}</strong><br>
-          <span class="muted">${html(g.label || "Group " + (g.i + 1))}</span>
+          <span class="muted">${html(displayGroupLabel(g))}</span>
         </td>
         <td class="${scoreClass(g.total)}">${scoreText(g.total)}</td>
         <td>
@@ -243,8 +270,8 @@
 
     list.innerHTML = (pool.groups || []).map((g, i) => `
       <div class="group-card">
-        <strong>${html(g.entrant)} - ${html(g.label || "Group " + (i + 1))}</strong>
-        <button class="danger" onclick="window.removeGroup(${i})">Remove</button>
+        <strong>${html(g.entrant)} - ${html(displayGroupLabel(g))}</strong>
+        <button class="danger admin-action" onclick="window.removeGroup(${i})" ${adminPinProvided() ? "" : "disabled"}>Remove</button>
         <ul>
           ${(g.golfers || []).map(x => `<li>${html(x)}</li>`).join("")}
         </ul>
@@ -264,14 +291,15 @@
   }
 
   function addGroup() {
+    if (!requireAdminPin("Add Group")) return;
+
     const entrant = norm($("entrantName")?.value);
     const golfers = ($("golfers")?.value || "").split(/\n|,/).map(norm).filter(Boolean);
 
     if (!entrant) return show("Enter the entrant name.", true);
     if (golfers.length !== 4) return show("Each paid group must have exactly 4 golfers.", true);
 
-    const label = norm($("groupLabel")?.value) ||
-      `Group ${(pool.groups || []).filter(g => g.entrant === entrant).length + 1}`;
+    const label = norm($("groupLabel")?.value);
 
     pool.groups = pool.groups || [];
     pool.groups.push({
@@ -290,6 +318,7 @@
   }
 
   window.removeGroup = function(i) {
+    if (!requireAdminPin("Remove")) return;
     if (!confirm("Remove this group?")) return;
     pool.groups.splice(i, 1);
     markUnsaved("Group removed. Click Save Pool to publish it.");
@@ -297,6 +326,8 @@
   };
 
   async function savePool(customSuccessMessage) {
+    if (!requireAdminPin("Save Pool")) return false;
+
     pool.feePerGroup = Number($("feePerGroup")?.value || 20);
     pool.missedCutPenalty = Number($("missedCutPenalty")?.value || 10);
     pool.withdrawnPenalty = Number($("withdrawnPenalty")?.value || 15);
@@ -317,6 +348,7 @@
   }
 
   function clearGroups() {
+    if (!requireAdminPin("Clear Groups")) return;
     if (!confirm("Clear groups on screen? Click Save Pool afterward to publish the change.")) return;
     pool.groups = [];
     markUnsaved("Groups cleared on screen. Click Save Pool to publish the change.");
@@ -381,8 +413,7 @@
     const file = event.target.files[0];
     if (!file) return;
 
-    if (!adminPinProvided()) {
-      show("Admin PIN is required before uploading entrant groups.", true);
+    if (!requireAdminPin("CSV Upload")) {
       event.target.value = "";
       return;
     }
@@ -429,7 +460,7 @@
         importedGroups.push({
           id: String(Date.now()) + "-" + Math.random().toString(36).slice(2),
           entrant: norm(entrant),
-          label: norm(groupLabel) || `Group ${importedGroups.length + 1}`,
+          label: norm(groupLabel),
           golfers
         });
       }
@@ -472,9 +503,9 @@
   function downloadTemplate() {
     const lines = [
       ["entrant", "group_label", "golfer1", "golfer2", "golfer3", "golfer4"],
-      ["Joe Brown", "Group 1", "Scottie Scheffler", "Rory McIlroy", "Xander Schauffele", "Collin Morikawa"],
-      ["Joe Brown", "Group 2", "Ludvig Aberg", "Brooks Koepka", "Bryson DeChambeau", "Viktor Hovland"],
-      ["Randy", "Group 1", "Patrick Cantlay", "Tommy Fleetwood", "Max Homa", "Jon Rahm"]
+      ["Joe Brown", "Group 10", "Scottie Scheffler", "Rory McIlroy", "Xander Schauffele", "Collin Morikawa"],
+      ["Joe Brown", "Group 22", "Ludvig Aberg", "Brooks Koepka", "Bryson DeChambeau", "Viktor Hovland"],
+      ["Randy", "Group 7", "Patrick Cantlay", "Tommy Fleetwood", "Max Homa", "Jon Rahm"]
     ].map(row => row.map(csvEscape).join(",")).join("\n");
 
     downloadCsv("us_open_pool_entrants_template.csv", lines);
@@ -500,6 +531,15 @@
 
   async function init() {
     setDebug("Script loaded. Initializing...");
+
+    if ($("adminPin")) {
+      $("adminPin").addEventListener("input", () => {
+        updateAdminAvailability();
+        renderGroups();
+      });
+    }
+
+    updateAdminAvailability();
 
     if ($("addGroup")) $("addGroup").onclick = addGroup;
     if ($("savePool")) $("savePool").onclick = () => savePool();

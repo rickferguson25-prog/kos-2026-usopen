@@ -58,6 +58,53 @@ th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;verti
 th{color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-size:.74rem;white-space:nowrap}
 tr.leader{background:rgba(53,208,127,.14)}
 tr.risk{background:rgba(255,107,107,.08)}
+
+.risk-heading{position:relative}
+.tooltip{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:18px;
+  height:18px;
+  margin-left:6px;
+  border-radius:999px;
+  border:1px solid rgba(244,231,197,.5);
+  color:var(--gold);
+  background:rgba(244,231,197,.12);
+  font-size:.72rem;
+  font-weight:900;
+  cursor:help;
+  text-transform:none;
+  letter-spacing:0;
+}
+.tooltip-text{
+  visibility:hidden;
+  opacity:0;
+  position:absolute;
+  z-index:50;
+  bottom:145%;
+  right:0;
+  width:260px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#031009;
+  color:var(--text);
+  box-shadow:0 18px 40px rgba(0,0,0,.35);
+  line-height:1.35;
+  font-size:.82rem;
+  font-weight:500;
+  text-transform:none;
+  letter-spacing:0;
+  transition:opacity .15s ease;
+  white-space:normal;
+}
+.tooltip:hover .tooltip-text,
+.tooltip:focus .tooltip-text{
+  visibility:visible;
+  opacity:1;
+}
 label{display:block;color:var(--muted);font-size:.82rem;margin-bottom:10px}
 input,textarea,button{
   width:100%;
@@ -69,9 +116,15 @@ input,textarea,button{
   padding:10px;
   font-size:.96rem;
 }
+input:disabled,
+textarea:disabled,
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
 textarea{min-height:118px;resize:vertical}
 button{cursor:pointer;font-weight:900;background:#143820}
-button:hover{filter:brightness(1.12)}
+button:hover:not(:disabled){filter:brightness(1.12)}
 .primary{background:linear-gradient(135deg,var(--green),#a3f7bf);color:#031009;border:0}
 .danger{background:#5c1717;border-color:#8a2626}
 .form-grid{display:grid;grid-template-columns:1fr;gap:10px}
@@ -124,6 +177,7 @@ footer span{color:#ffe1a1;font-weight:800}
   border:1px solid rgba(244,160,30,.45);
 }
 @media(max-width:480px){
+  .tooltip-text{right:auto;left:-120px;width:240px}
   .stats{grid-template-columns:1fr}
   .stats strong{font-size:1.15rem}
   .debug-card button{width:100%}

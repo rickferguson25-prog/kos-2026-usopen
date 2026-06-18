@@ -1,6 +1,6 @@
 {
   "name": "us-open-golf-pool-live",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "scripts": {
     "build": "echo Static site - no build step",

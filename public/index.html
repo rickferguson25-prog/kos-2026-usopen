@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Kings of Swing Golf Pool</title>
-  <link rel="stylesheet" href="/styles.css?v=107"/>
+  <link rel="stylesheet" href="/styles.css?v=108"/>
 </head>
 <body>
 <header class="hero">
@@ -31,7 +31,7 @@
 
   <section class="card debug-card">
     <button id="forceReload">Force Reload Pool + Scores</button>
-    <p id="debugLine">App version v107 loading…</p>
+    <p id="debugLine">App version v108 loading…</p>
   </section>
 
   <section class="card">
@@ -50,7 +50,12 @@
             <th>Entrant / Group</th>
             <th>Score</th>
             <th>Golfers</th>
-            <th>Risk</th>
+            <th class="risk-heading">
+              Risk
+              <span class="tooltip" tabindex="0" aria-label="Risk explanation">?
+                <span class="tooltip-text">Risk is the number of golfers in this group who are not currently safe because they are marked Missed Cut, Withdrawn, or Not Found in the live feed.</span>
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody id="leaderboardBody"></tbody>
@@ -65,7 +70,7 @@
       <div class="csv-box">
         <h3>Upload Entrant Groups CSV</h3>
         <label>Choose CSV File
-          <input id="csvUpload" type="file" accept=".csv,text/csv" />
+          <input id="csvUpload" class="admin-only" type="file" accept=".csv,text/csv" disabled />
         </label>
         <div class="button-row">
           <button id="downloadTemplate">Download CSV Template</button>
@@ -81,36 +86,36 @@
           <input id="adminPin" type="password" placeholder="ADMIN_PIN"/>
         </label>
         <label>Entrant Name
-          <input id="entrantName" placeholder="Randy"/>
+          <input id="entrantName" class="admin-only" placeholder="Randy" disabled />
         </label>
         <label>Group Label
-          <input id="groupLabel" placeholder="Group 1"/>
+          <input id="groupLabel" class="admin-only" placeholder="Group 1" disabled />
         </label>
       </div>
 
       <label>Exactly four golfers, one per line
-        <textarea id="golfers" placeholder="Scottie Scheffler&#10;Rory McIlroy&#10;Xander Schauffele&#10;Collin Morikawa"></textarea>
+        <textarea id="golfers" class="admin-only" placeholder="Scottie Scheffler&#10;Rory McIlroy&#10;Xander Schauffele&#10;Collin Morikawa" disabled></textarea>
       </label>
 
       <div class="form-grid">
         <label>Fee per group
-          <input id="feePerGroup" type="number" value="20"/>
+          <input id="feePerGroup" class="admin-only" type="number" value="20" disabled />
         </label>
         <label>Missed Cut Penalty
-          <input id="missedCutPenalty" type="number" value="10"/>
+          <input id="missedCutPenalty" class="admin-only" type="number" value="10" disabled />
         </label>
         <label>Withdrawn Penalty
-          <input id="withdrawnPenalty" type="number" value="15"/>
+          <input id="withdrawnPenalty" class="admin-only" type="number" value="15" disabled />
         </label>
       </div>
 
       <div class="button-row">
-        <button class="primary" id="addGroup">Add Group</button>
-        <button class="primary" id="savePool">Save Pool</button>
-        <button class="danger" id="clearGroups">Clear Groups</button>
+        <button class="primary admin-only" id="addGroup" disabled>Add Group</button>
+        <button class="primary admin-only" id="savePool" disabled>Save Pool</button>
+        <button class="danger admin-only" id="clearGroups" disabled>Clear Groups</button>
       </div>
 
-      <p class="message" id="message"></p>
+      <p class="message" id="message">Enter the Admin PIN to enable admin functions.</p>
     </section>
 
     <section class="card">
@@ -139,13 +144,13 @@
 </main>
 
 <footer>
-  <img src="/assets/KOS_Logo.jpeg?v=107" alt="Kings of Swing logo" class="footer-logo"/>
+  <img src="/assets/KOS_Logo.jpeg?v=108" alt="Kings of Swing logo" class="footer-logo"/>
   <div>
     <strong>Kings of Swing Golf Group</strong>
     <span>Powered by TRG</span>
   </div>
 </footer>
 
-<script src="/app.js?v=107" defer></script>
+<script src="/app.js?v=108" defer></script>
 </body>
 </html>

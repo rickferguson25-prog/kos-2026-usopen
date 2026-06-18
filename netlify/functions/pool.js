@@ -54,7 +54,7 @@ function cleanGroups(groups) {
   return groups.map((g, i) => ({
     id: g.id || `group-${Date.now()}-${i}`,
     entrant: String(g.entrant || "").trim(),
-    label: String(g.label || `Group ${i + 1}`).trim(),
+    label: String(g.label || "").trim(),
     golfers: Array.isArray(g.golfers)
       ? g.golfers.map(x => String(x || "").trim()).filter(Boolean).slice(0, 4)
       : []
