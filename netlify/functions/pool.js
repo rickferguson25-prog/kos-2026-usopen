@@ -13,7 +13,10 @@ const defaultPool = {
 function send(statusCode, body) {
   return {
     statusCode,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store, max-age=0"
+    },
     body: JSON.stringify(body)
   };
 }
@@ -66,6 +69,6 @@ exports.handler = async function(event) {
 
     return send(405, { error: "Method not allowed." });
   } catch (err) {
-    return send(500, { error: "Save failed inside Netlify function.", detail: err.message });
+    return send(500, { error: "Pool function failed.", detail: err.message });
   }
 };

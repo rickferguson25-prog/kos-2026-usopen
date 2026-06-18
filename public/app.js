@@ -1,11 +1,13 @@
 (() => {
-  console.log("US Open Golf Pool app.js v103 loaded");
+  const VERSION = "v104";
+  console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
   let pool = { feePerGroup: 20, golfersPerGroup: 4, missedCutPenalty: 10, withdrawnPenalty: 15, groups: [] };
   let live = { players: [], provider: "loading" };
 
   const $ = id => document.getElementById(id);
   const setText = (id, text) => { const el = $(id); if (el) el.textContent = text; };
+  const setDebug = text => setText("debugLine", `${VERSION} • ${text}`);
 
   function norm(v){ return String(v || "").trim().replace(/\s+/g, " "); }
   function key(v){ return norm(v).toLowerCase().replace(/[.'’]/g, ""); }
@@ -23,12 +25,11 @@
     return data;
   }
 
-  async function apiGet(url){ return parseResponse(await fetch(url, { cache: "no-store" })); }
-
+  async function apiGet(url){ return parseResponse(await fetch(url + (url.includes("?") ? "&" : "?") + "_=" + Date.now(), { cache: "no-store" })); }
   async function apiPost(url, data){
     const headers = { "content-type": "application/json" };
     if ($("adminPin") && $("adminPin").value) headers["x-admin-pin"] = $("adminPin").value;
-    return parseResponse(await fetch(url, { method: "POST", headers, body: JSON.stringify(data) }));
+    return parseResponse(await fetch(url, { method: "POST", headers, body: JSON.stringify(data), cache: "no-store" }));
   }
 
   async function loadPool(){
@@ -37,9 +38,11 @@
       if ($("feePerGroup")) $("feePerGroup").value = pool.feePerGroup ?? 20;
       if ($("missedCutPenalty")) $("missedCutPenalty").value = pool.missedCutPenalty ?? 10;
       if ($("withdrawnPenalty")) $("withdrawnPenalty").value = pool.withdrawnPenalty ?? 15;
+      setDebug(`Pool loaded: ${(pool.groups || []).length} group(s), updated ${pool.updatedAt ? new Date(pool.updatedAt).toLocaleString() : "not yet saved"}`);
     } catch (e) {
       console.warn("Pool load failed:", e);
-      show("Pool storage is not available yet, but the live feed loaded. " + e.message, true);
+      setDebug("Pool load failed: " + e.message);
+      show("Pool storage is not available on this device yet. " + e.message, true);
     }
   }
 
@@ -66,6 +69,7 @@
     if (p.status === "Withdrawn") total += Number(pool.withdrawnPenalty || 15);
     return { ...p, total };
   }
+
   function rows(){
     return (pool.groups || []).map((g, i) => {
       const golfers = (g.golfers || []).map(eff);
@@ -149,9 +153,11 @@
     try {
       pool = await apiPost("/api/pool", pool);
       show("Pool saved successfully.");
+      setDebug(`Pool saved: ${(pool.groups || []).length} group(s), updated ${new Date(pool.updatedAt).toLocaleString()}`);
       render();
     } catch (e) {
       show(e.message, true);
+      setDebug("Save failed: " + e.message);
     }
   }
 
@@ -161,22 +167,24 @@
     render();
   }
 
+  async function reloadAll(){
+    setDebug("Force reload started...");
+    await loadLive();
+    await loadPool();
+    render();
+  }
+
   async function init(){
-    setText("lastUpdated", "App script loaded. Initializing…");
+    setDebug("Script loaded. Initializing...");
     if ($("addGroup")) $("addGroup").onclick = addGroup;
     if ($("savePool")) $("savePool").onclick = savePool;
     if ($("clearGroups")) $("clearGroups").onclick = clearGroups;
     if ($("refreshNow")) $("refreshNow").onclick = async () => { await loadLive(); render(); };
-
-    await loadLive();
-    await loadPool();
-    render();
-    setInterval(async () => { await loadLive(); render(); }, 60000);
+    if ($("forceReload")) $("forceReload").onclick = reloadAll;
+    await reloadAll();
+    setInterval(reloadAll, 60000);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();

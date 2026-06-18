@@ -1,7 +1,7 @@
 function send(statusCode, body) {
   return {
     statusCode,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store, max-age=0" },
     body: JSON.stringify(body)
   };
 }
@@ -11,8 +11,10 @@ exports.handler = async function() {
     "Scottie Scheffler", "Rory McIlroy", "Xander Schauffele", "Collin Morikawa",
     "Ludvig Aberg", "Brooks Koepka", "Bryson DeChambeau", "Viktor Hovland",
     "Patrick Cantlay", "Tommy Fleetwood", "Max Homa", "Jon Rahm",
-    "Hideki Matsuyama", "Jordan Spieth", "Tony Finau", "Sahith Theegala"
+    "Hideki Matsuyama", "Jordan Spieth", "Tony Finau", "Sahith Theegala",
+    "Joe Brown"
   ];
+
   const now = Date.now();
   const players = names.map((name, i) => ({
     id: `demo-${i}`,
@@ -22,5 +24,6 @@ exports.handler = async function() {
     position: String(i + 1),
     status: "Active"
   })).sort((a, b) => a.total - b.total).map((p, i) => ({ ...p, position: String(i + 1) }));
+
   return send(200, { provider: "demo", eventName: "Demo Golf Feed", updatedAt: new Date().toISOString(), players });
 };
