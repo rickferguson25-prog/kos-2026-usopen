@@ -3,8 +3,7 @@
   "version": "1.0.3",
   "private": true,
   "scripts": {
-    "build": "echo Static site - no build step",
-    "dev": "netlify dev"
+    "build": "echo Static site - no build step"
   },
   "dependencies": {
     "@netlify/blobs": "^8.2.0"

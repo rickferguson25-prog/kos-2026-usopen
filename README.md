@@ -1,22 +1,15 @@
-# 2026 U.S. Open Golf Pool - Manual Blobs Credentials Patch
+# Front-end fix
 
-This version fixes MissingBlobsEnvironmentError by explicitly passing siteID and token to Netlify Blobs.
+This version cache-busts app.js and shows more precise feed status messages.
 
-Required environment variables:
+Deploy steps:
+1. Replace the repo contents with this ZIP's contents.
+2. Confirm package.json is at repo root.
+3. Trigger Deploys -> Clear cache and deploy site.
+4. Open the site in an incognito/private window or hard refresh with Ctrl+F5.
 
-ADMIN_PIN=your-private-pin
-LIVE_GOLF_PROVIDER=demo
-CACHE_SECONDS=60
-REFRESH_SECONDS=60
-NETLIFY_BLOBS_SITE_ID=your-site-id
-NETLIFY_BLOBS_TOKEN=your-personal-access-token
+If /api/live-leaderboard works but the page says Loading, open:
+https://your-site.netlify.app/app.js?v=103
 
-Find Site ID in Netlify: Site configuration > General > Site details > Site ID.
-Create token in Netlify: User settings > Applications > Personal access tokens.
-
-Deploy settings:
-Build command: npm run build
-Publish directory: public
-Functions directory: netlify/functions
-
-After adding variables, use Trigger deploy > Clear cache and deploy site.
+You should see this app file, including:
+US Open Golf Pool app.js v103 loaded

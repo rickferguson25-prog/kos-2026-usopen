@@ -18,14 +18,10 @@ function send(statusCode, body) {
   };
 }
 
-function getPoolStore() {
-  const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.SITE_ID;
-  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
-
-  if (siteID && token) {
-    return getStore({ name: "us-open-golf-pool", siteID, token });
-  }
-
+function makeStore() {
+  const siteID = process.env.NETLIFY_BLOBS_SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN;
+  if (siteID && token) return getStore({ name: "us-open-golf-pool", siteID, token });
   return getStore("us-open-golf-pool");
 }
 
@@ -38,15 +34,13 @@ function authorized(event) {
 
 exports.handler = async function(event) {
   try {
-    const store = getPoolStore();
+    const store = makeStore();
     const current = await store.get("pool", { type: "json" }) || defaultPool;
 
     if (event.httpMethod === "GET") return send(200, current);
 
     if (event.httpMethod === "POST") {
-      if (!authorized(event)) {
-        return send(401, { error: "Invalid admin PIN. It must match ADMIN_PIN in Netlify environment variables." });
-      }
+      if (!authorized(event)) return send(401, { error: "Invalid admin PIN." });
 
       const body = JSON.parse(event.body || "{}");
       const groups = Array.isArray(body.groups) ? body.groups.map((g, i) => ({
@@ -72,10 +66,6 @@ exports.handler = async function(event) {
 
     return send(405, { error: "Method not allowed." });
   } catch (err) {
-    return send(500, {
-      error: "Save failed inside Netlify function.",
-      detail: err.message,
-      expectedFix: "Add NETLIFY_BLOBS_SITE_ID and NETLIFY_BLOBS_TOKEN environment variables, then clear cache and redeploy."
-    });
+    return send(500, { error: "Save failed inside Netlify function.", detail: err.message });
   }
 };

@@ -1,14 +1,26 @@
-function send(statusCode, body, maxAge = 0) {
+function send(statusCode, body) {
   return {
     statusCode,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": maxAge ? `public, max-age=${maxAge}` : "no-store" },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
     body: JSON.stringify(body)
   };
 }
-function numericScore(value) { if (value === null || value === undefined || value === "") return 0; if (typeof value === "number") return value; const s = String(value).trim().toUpperCase(); if (s === "E" || s === "EVEN") return 0; return Number(s.replace("+", "")) || 0; }
-function playerName(p) { return p.name || p.Name || p.player_name || p.PlayerName || p.full_name || p.FullName || [p.FirstName || p.first_name || p.firstName, p.LastName || p.last_name || p.lastName].filter(Boolean).join(" "); }
-function status(p) { const raw = String(p.status || p.Status || p.player_status || "").toLowerCase(); if (p.IsWithdrawn || p.withdrawn || raw.includes("withdraw")) return "Withdrawn"; if (p.MadeCut === false || p.madeCut === false || raw.includes("missed cut")) return "Missed Cut"; if (raw.includes("final") || raw.includes("finish") || raw.includes("complete")) return "Finished"; return "Active"; }
-function normalize(raw) { const arrays = [raw && raw.players, raw && raw.Players, raw && raw.leaderboard, raw && raw.Leaderboard, raw && raw.data, raw && raw.Data, raw && raw.results, raw && raw.Results, raw && raw.TournamentPlayers].filter(Array.isArray); const rows = arrays[0] || (Array.isArray(raw) ? raw : []); return rows.map((p, i) => { const nm = playerName(p) || `Player ${i+1}`; const total = p.total ?? p.Total ?? p.Score ?? p.score ?? p.TotalScore ?? p.TournamentScore ?? p.ToPar ?? p.to_par ?? p.total_to_par ?? 0; return { id: String(p.id || p.ID || p.PlayerID || p.player_id || nm), name: String(nm).trim(), total: numericScore(total), thru: String(p.thru || p.Thru || p.HolesThrough || p.current_hole || p.CurrentHole || "—"), position: String(p.position || p.Position || p.Rank || p.rank || "—"), status: status(p) }; }).filter(p => p.name).sort((a,b)=>a.total-b.total); }
-async function fetchJson(url, options) { const r = await fetch(url, options); if (!r.ok) throw new Error(`Feed request failed: ${r.status}`); return r.json(); }
-function demo() { const names = ["Scottie Scheffler","Rory McIlroy","Xander Schauffele","Collin Morikawa","Ludvig Aberg","Brooks Koepka","Bryson DeChambeau","Viktor Hovland","Patrick Cantlay","Tommy Fleetwood","Max Homa","Jon Rahm","Hideki Matsuyama","Jordan Spieth","Tony Finau","Sahith Theegala"]; const now = Date.now(); const players = names.map((name,i)=>({ id:`demo-${i}`, name, total: Math.round(((i % 7)-3)+Math.sin(now/600000+i)*2), thru: String((Math.floor(now/60000)+i)%18 || 18), position:String(i+1), status:"Active" })).sort((a,b)=>a.total-b.total).map((p,i)=>({...p, position:String(i+1)})); return { provider:"demo", eventName:"Demo Golf Feed", updatedAt:new Date().toISOString(), players }; }
-exports.handler = async function() { try { const provider = String(process.env.LIVE_GOLF_PROVIDER || "demo").toLowerCase(); if (provider === "custom") { if (!process.env.CUSTOM_FEED_URL) throw new Error("CUSTOM_FEED_URL is required."); const raw = await fetchJson(process.env.CUSTOM_FEED_URL); return send(200, { provider, eventName: raw.eventName || "Custom Golf Feed", updatedAt: raw.updatedAt || new Date().toISOString(), players: normalize(raw) }); } if (provider === "rapidapi") { if (!process.env.RAPIDAPI_URL || !process.env.RAPIDAPI_KEY) throw new Error("RAPIDAPI_URL and RAPIDAPI_KEY are required."); const headers = { "x-rapidapi-key": process.env.RAPIDAPI_KEY }; if (process.env.RAPIDAPI_HOST) headers["x-rapidapi-host"] = process.env.RAPIDAPI_HOST; const raw = await fetchJson(process.env.RAPIDAPI_URL, { headers }); return send(200, { provider, eventName: raw.eventName || "RapidAPI Golf Feed", updatedAt: raw.updatedAt || new Date().toISOString(), players: normalize(raw) }); } if (provider === "sportsdataio") { if (!process.env.SPORTSDATAIO_URL) throw new Error("SPORTSDATAIO_URL is required."); const url = new URL(process.env.SPORTSDATAIO_URL); if (process.env.SPORTSDATAIO_KEY && !url.searchParams.has("key")) url.searchParams.set("key", process.env.SPORTSDATAIO_KEY); const raw = await fetchJson(url.toString()); return send(200, { provider, eventName: raw.Name || raw.TournamentName || "SportsDataIO Golf Feed", updatedAt: new Date().toISOString(), players: normalize(raw) }); } return send(200, demo()); } catch (err) { return send(500, { error: err.message, provider: process.env.LIVE_GOLF_PROVIDER || "demo" }); } };
+
+exports.handler = async function() {
+  const names = [
+    "Scottie Scheffler", "Rory McIlroy", "Xander Schauffele", "Collin Morikawa",
+    "Ludvig Aberg", "Brooks Koepka", "Bryson DeChambeau", "Viktor Hovland",
+    "Patrick Cantlay", "Tommy Fleetwood", "Max Homa", "Jon Rahm",
+    "Hideki Matsuyama", "Jordan Spieth", "Tony Finau", "Sahith Theegala"
+  ];
+  const now = Date.now();
+  const players = names.map((name, i) => ({
+    id: `demo-${i}`,
+    name,
+    total: Math.round(((i % 7) - 3) + Math.sin(now / 600000 + i) * 2),
+    thru: String((Math.floor(now / 60000) + i) % 18 || 18),
+    position: String(i + 1),
+    status: "Active"
+  })).sort((a, b) => a.total - b.total).map((p, i) => ({ ...p, position: String(i + 1) }));
+  return send(200, { provider: "demo", eventName: "Demo Golf Feed", updatedAt: new Date().toISOString(), players });
+};
