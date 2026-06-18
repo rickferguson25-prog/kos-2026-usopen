@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "v106";
+  const VERSION = "v107";
   console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
   let pool = {
@@ -11,6 +11,7 @@
   };
 
   let live = { players: [], provider: "loading" };
+  let hasUnsavedChanges = false;
 
   const $ = id => document.getElementById(id);
   const setText = (id, text) => {
@@ -61,6 +62,10 @@
     el.className = err ? "message error" : "message";
   }
 
+  function adminPinProvided() {
+    return Boolean(norm($("adminPin")?.value));
+  }
+
   async function parseResponse(res) {
     const text = await res.text();
     let data;
@@ -99,7 +104,14 @@
     }));
   }
 
-  async function loadPool() {
+  async function loadPool(options = {}) {
+    const preserveUnsaved = options.preserveUnsaved !== false;
+
+    if (hasUnsavedChanges && preserveUnsaved) {
+      setDebug("Skipped pool reload because there are unsaved local changes.");
+      return;
+    }
+
     try {
       pool = await apiGet("/api/pool");
 
@@ -246,6 +258,11 @@
     renderGroups();
   }
 
+  function markUnsaved(message) {
+    hasUnsavedChanges = true;
+    show(message);
+  }
+
   function addGroup() {
     const entrant = norm($("entrantName")?.value);
     const golfers = ($("golfers")?.value || "").split(/\n|,/).map(norm).filter(Boolean);
@@ -268,18 +285,18 @@
     $("groupLabel").value = "";
     $("golfers").value = "";
 
-    show("Group added. Click Save Pool to publish it.");
+    markUnsaved("Group added. Click Save Pool to publish it.");
     render();
   }
 
   window.removeGroup = function(i) {
     if (!confirm("Remove this group?")) return;
     pool.groups.splice(i, 1);
-    show("Group removed. Click Save Pool to publish it.");
+    markUnsaved("Group removed. Click Save Pool to publish it.");
     render();
   };
 
-  async function savePool() {
+  async function savePool(customSuccessMessage) {
     pool.feePerGroup = Number($("feePerGroup")?.value || 20);
     pool.missedCutPenalty = Number($("missedCutPenalty")?.value || 10);
     pool.withdrawnPenalty = Number($("withdrawnPenalty")?.value || 15);
@@ -287,26 +304,29 @@
 
     try {
       pool = await apiPost("/api/pool", pool);
-      show("Pool saved successfully.");
+      hasUnsavedChanges = false;
+      show(customSuccessMessage || "Pool saved successfully.");
       setDebug(`Pool saved: ${(pool.groups || []).length} group(s), updated ${new Date(pool.updatedAt).toLocaleString()}`);
       render();
+      return true;
     } catch (e) {
       show(e.message, true);
       setDebug("Save failed: " + e.message);
+      return false;
     }
   }
 
   function clearGroups() {
     if (!confirm("Clear groups on screen? Click Save Pool afterward to publish the change.")) return;
     pool.groups = [];
-    show("Groups cleared on screen. Click Save Pool to publish the change.");
+    markUnsaved("Groups cleared on screen. Click Save Pool to publish the change.");
     render();
   }
 
-  async function reloadAll() {
+  async function reloadAll(forcePoolReload = false) {
     setDebug("Force reload started...");
     await loadLive();
-    await loadPool();
+    await loadPool({ preserveUnsaved: !forcePoolReload });
     render();
   }
 
@@ -357,13 +377,19 @@
     return s;
   }
 
-  function uploadEntrantGroupsCsv(event) {
+  async function uploadEntrantGroupsCsv(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    if (!adminPinProvided()) {
+      show("Admin PIN is required before uploading entrant groups.", true);
+      event.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
 
-    reader.onload = () => {
+    reader.onload = async () => {
       const rows = parseCsv(reader.result);
 
       if (!rows.length) {
@@ -410,16 +436,20 @@
 
       if (!importedGroups.length) {
         show("No valid 4-player groups were found in the CSV.", true);
+        event.target.value = "";
         return;
       }
 
       pool.groups = pool.groups || [];
       pool.groups.push(...importedGroups);
+      hasUnsavedChanges = true;
+      render();
 
       const skipText = skippedRows.length ? ` Skipped row(s): ${skippedRows.join(", ")}.` : "";
-      show(`${importedGroups.length} group(s) imported from CSV. Click Save Pool to publish them.${skipText}`);
-      setDebug(`CSV import complete: ${importedGroups.length} group(s).`);
-      render();
+      show(`${importedGroups.length} group(s) imported. Saving now...${skipText}`);
+      setDebug(`CSV import complete: ${importedGroups.length} group(s). Saving...`);
+
+      await savePool(`${importedGroups.length} group(s) imported and saved successfully.${skipText}`);
 
       event.target.value = "";
     };
@@ -472,16 +502,16 @@
     setDebug("Script loaded. Initializing...");
 
     if ($("addGroup")) $("addGroup").onclick = addGroup;
-    if ($("savePool")) $("savePool").onclick = savePool;
+    if ($("savePool")) $("savePool").onclick = () => savePool();
     if ($("clearGroups")) $("clearGroups").onclick = clearGroups;
     if ($("refreshNow")) $("refreshNow").onclick = async () => { await loadLive(); render(); };
-    if ($("forceReload")) $("forceReload").onclick = reloadAll;
+    if ($("forceReload")) $("forceReload").onclick = () => reloadAll(true);
     if ($("csvUpload")) $("csvUpload").addEventListener("change", uploadEntrantGroupsCsv);
     if ($("downloadTemplate")) $("downloadTemplate").onclick = downloadTemplate;
     if ($("exportCsv")) $("exportCsv").onclick = exportCurrentGroupsCsv;
 
-    await reloadAll();
-    setInterval(reloadAll, 60000);
+    await reloadAll(true);
+    setInterval(() => reloadAll(false), 60000);
   }
 
   if (document.readyState === "loading") {

@@ -1,35 +1,27 @@
 # Kings of Swing Golf Pool Live App
 
-This is the complete replacement repo for the Netlify app.
+Complete replacement repo for the Netlify app.
 
-## Branding updates
+## Version
 
-- Adds KOS_Logo.jpeg to the header
-- Adds a smaller KOS logo in the footer
-- Adds "Powered by TRG" in the header and footer
-- App version: v106
+v107
 
-## Features
+## Changes in this version
 
-- $20 per 4-player group
-- Multiple groups per entrant
-- CSV upload for entrant groups
-- CSV template download
-- Export current groups to CSV
-- Netlify Blobs storage for saved groups
-- Public leaderboard
-- Demo live golf feed
-- Later support for RapidAPI, SportsDataIO, or custom JSON feed
+- Removed the large KOS logo from the top/header.
+- Removed "Powered by TRG" from the top/header.
+- Kept KOS logo and "Powered by TRG" in the footer.
+- Removed the on-page CSV column instruction text.
+- Requires Admin PIN before CSV upload is allowed.
+- CSV upload now auto-saves imported groups to Netlify storage.
+- Auto-refresh no longer overwrites unsaved local changes.
+- Force Reload button can still reload saved pool data from storage.
 
 ## CSV format
 
-Required columns:
+The CSV still uses this header:
 
 entrant,group_label,golfer1,golfer2,golfer3,golfer4
-
-Example:
-
-Joe Brown,Group 1,Scottie Scheffler,Rory McIlroy,Xander Schauffele,Collin Morikawa
 
 ## Replace your GitHub repo
 
@@ -76,11 +68,11 @@ Netlify -> Deploys -> Trigger deploy -> Clear cache and deploy site
 
 Then open:
 
-https://your-site-name.netlify.app/?v=106
+https://your-site-name.netlify.app/?v=107
 
 ## Test endpoints
 
 /api/pool
 /api/live-leaderboard
-/app.js?v=106
-/assets/KOS_Logo.jpeg?v=106
+/app.js?v=107
+/assets/KOS_Logo.jpeg?v=107
