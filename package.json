@@ -1,11 +1,15 @@
 {
   "name": "us-open-golf-pool-live",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "private": true,
   "scripts": {
-    "build": "echo Static site - no build step"
+    "build": "echo Static site - no build step",
+    "dev": "netlify dev"
   },
   "dependencies": {
     "@netlify/blobs": "^8.2.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.38.1"
   }
 }

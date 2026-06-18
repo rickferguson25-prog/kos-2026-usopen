@@ -3,16 +3,21 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>2026 U.S. Open Golf Pool</title>
-  <link rel="stylesheet" href="/styles.css?v=104"/>
+  <title>Kings of Swing Golf Pool</title>
+  <link rel="stylesheet" href="/styles.css?v=106"/>
 </head>
 <body>
-<header>
-  <div>
-    <p class="eyebrow">Live golf pool tracker</p>
-    <h1>2026 U.S. Open Golf Pool</h1>
-    <p>Enter each entrant’s 4-player groups once. The leaderboard calculates from the configured live golf feed.</p>
+<header class="hero">
+  <div class="brand-block">
+    <img src="/assets/KOS_Logo.jpeg?v=106" alt="Kings of Swing Golf Group logo" class="kos-logo"/>
+    <div>
+      <p class="eyebrow">Kings of Swing Golf Group</p>
+      <h1>2026 U.S. Open Golf Pool</h1>
+      <p>Enter each entrant’s 4-player groups once. The leaderboard calculates from the configured live golf feed.</p>
+      <p class="powered">Powered by TRG</p>
+    </div>
   </div>
+
   <div class="card status">
     <span>Feed</span>
     <strong id="feedStatus">Loading…</strong>
@@ -30,7 +35,7 @@
 
   <section class="card debug-card">
     <button id="forceReload">Force Reload Pool + Scores</button>
-    <p id="debugLine">App version v104 loading…</p>
+    <p id="debugLine">App version v106 loading…</p>
   </section>
 
   <section class="card">
@@ -43,7 +48,15 @@
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Rank</th><th>Entrant / Group</th><th>Score</th><th>Golfers</th><th>Risk</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Entrant / Group</th>
+            <th>Score</th>
+            <th>Golfers</th>
+            <th>Risk</th>
+          </tr>
+        </thead>
         <tbody id="leaderboardBody"></tbody>
       </table>
     </div>
@@ -52,24 +65,56 @@
   <section class="grid">
     <section class="card">
       <h2>Admin: Enter Groups</h2>
-      <div class="form-grid">
-        <label>Admin PIN<input id="adminPin" type="password" placeholder="ADMIN_PIN"/></label>
-        <label>Entrant Name<input id="entrantName" placeholder="Randy"/></label>
-        <label>Group Label<input id="groupLabel" placeholder="Group 1"/></label>
+
+      <div class="csv-box">
+        <h3>Upload Entrant Groups CSV</h3>
+        <p>CSV columns: entrant, group_label, golfer1, golfer2, golfer3, golfer4</p>
+        <label>Choose CSV File
+          <input id="csvUpload" type="file" accept=".csv,text/csv" />
+        </label>
+        <div class="button-row">
+          <button id="downloadTemplate">Download CSV Template</button>
+          <button id="exportCsv">Export Current Groups CSV</button>
+        </div>
       </div>
+
+      <hr>
+
+      <h3>Or add one group manually</h3>
+      <div class="form-grid">
+        <label>Admin PIN
+          <input id="adminPin" type="password" placeholder="ADMIN_PIN"/>
+        </label>
+        <label>Entrant Name
+          <input id="entrantName" placeholder="Randy"/>
+        </label>
+        <label>Group Label
+          <input id="groupLabel" placeholder="Group 1"/>
+        </label>
+      </div>
+
       <label>Exactly four golfers, one per line
         <textarea id="golfers" placeholder="Scottie Scheffler&#10;Rory McIlroy&#10;Xander Schauffele&#10;Collin Morikawa"></textarea>
       </label>
+
       <div class="form-grid">
-        <label>Fee per group<input id="feePerGroup" type="number" value="20"/></label>
-        <label>Missed Cut Penalty<input id="missedCutPenalty" type="number" value="10"/></label>
-        <label>Withdrawn Penalty<input id="withdrawnPenalty" type="number" value="15"/></label>
+        <label>Fee per group
+          <input id="feePerGroup" type="number" value="20"/>
+        </label>
+        <label>Missed Cut Penalty
+          <input id="missedCutPenalty" type="number" value="10"/>
+        </label>
+        <label>Withdrawn Penalty
+          <input id="withdrawnPenalty" type="number" value="15"/>
+        </label>
       </div>
+
       <div class="button-row">
         <button class="primary" id="addGroup">Add Group</button>
-        <button id="savePool">Save Pool</button>
+        <button class="primary" id="savePool">Save Pool</button>
         <button class="danger" id="clearGroups">Clear Groups</button>
       </div>
+
       <p class="message" id="message"></p>
     </section>
 
@@ -77,16 +122,35 @@
       <h2>Live Golfer Scores</h2>
       <div class="table-wrap compact">
         <table>
-          <thead><tr><th>Pos</th><th>Golfer</th><th>Score</th><th>Thru</th><th>Status</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>Golfer</th>
+              <th>Score</th>
+              <th>Thru</th>
+              <th>Status</th>
+            </tr>
+          </thead>
           <tbody id="golferBody"></tbody>
         </table>
       </div>
     </section>
   </section>
 
-  <section class="card"><h2>Saved Groups</h2><div id="groupsList" class="groups"></div></section>
+  <section class="card">
+    <h2>Saved Groups</h2>
+    <div id="groupsList" class="groups"></div>
+  </section>
 </main>
 
-<script src="/app.js?v=104" defer></script>
+<footer>
+  <img src="/assets/KOS_Logo.jpeg?v=106" alt="Kings of Swing logo" class="footer-logo"/>
+  <div>
+    <strong>Kings of Swing Golf Group</strong>
+    <span>Powered by TRG</span>
+  </div>
+</footer>
+
+<script src="/app.js?v=106" defer></script>
 </body>
 </html>

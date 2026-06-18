@@ -1,43 +1,112 @@
 (() => {
-  const VERSION = "v104";
+  const VERSION = "v106";
   console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
-  let pool = { feePerGroup: 20, golfersPerGroup: 4, missedCutPenalty: 10, withdrawnPenalty: 15, groups: [] };
+  let pool = {
+    feePerGroup: 20,
+    golfersPerGroup: 4,
+    missedCutPenalty: 10,
+    withdrawnPenalty: 15,
+    groups: []
+  };
+
   let live = { players: [], provider: "loading" };
 
   const $ = id => document.getElementById(id);
-  const setText = (id, text) => { const el = $(id); if (el) el.textContent = text; };
+  const setText = (id, text) => {
+    const el = $(id);
+    if (el) el.textContent = text;
+  };
   const setDebug = text => setText("debugLine", `${VERSION} • ${text}`);
 
-  function norm(v){ return String(v || "").trim().replace(/\s+/g, " "); }
-  function key(v){ return norm(v).toLowerCase().replace(/[.'’]/g, ""); }
-  function money(n){ return new Intl.NumberFormat(undefined, { style:"currency", currency:"USD", maximumFractionDigits:0 }).format(Number(n || 0)); }
-  function scoreText(n){ const v = Number(n || 0); return v < 0 ? String(v) : v > 0 ? "+" + v : "E"; }
-  function scoreClass(n){ const v = Number(n || 0); return v < 0 ? "score-under" : v > 0 ? "score-over" : "score-even"; }
-  function html(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
-  function show(msg, err=false){ const el = $("message"); if (!el) return; el.textContent = msg; el.className = err ? "message error" : "message"; }
+  function norm(v) {
+    return String(v || "").trim().replace(/\s+/g, " ");
+  }
 
-  async function parseResponse(res){
+  function key(v) {
+    return norm(v).toLowerCase().replace(/[.'’]/g, "");
+  }
+
+  function money(n) {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0
+    }).format(Number(n || 0));
+  }
+
+  function scoreText(n) {
+    const v = Number(n || 0);
+    return v < 0 ? String(v) : v > 0 ? "+" + v : "E";
+  }
+
+  function scoreClass(n) {
+    const v = Number(n || 0);
+    return v < 0 ? "score-under" : v > 0 ? "score-over" : "score-even";
+  }
+
+  function html(v) {
+    return String(v ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function show(msg, err = false) {
+    const el = $("message");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = err ? "message error" : "message";
+  }
+
+  async function parseResponse(res) {
     const text = await res.text();
     let data;
-    try { data = JSON.parse(text); } catch { data = { error: text || res.statusText }; }
-    if (!res.ok) throw new Error(data.error + (data.detail ? ` Detail: ${data.detail}` : ""));
+
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text || res.statusText };
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error + (data.detail ? ` Detail: ${data.detail}` : ""));
+    }
+
     return data;
   }
 
-  async function apiGet(url){ return parseResponse(await fetch(url + (url.includes("?") ? "&" : "?") + "_=" + Date.now(), { cache: "no-store" })); }
-  async function apiPost(url, data){
-    const headers = { "content-type": "application/json" };
-    if ($("adminPin") && $("adminPin").value) headers["x-admin-pin"] = $("adminPin").value;
-    return parseResponse(await fetch(url, { method: "POST", headers, body: JSON.stringify(data), cache: "no-store" }));
+  async function apiGet(url) {
+    const sep = url.includes("?") ? "&" : "?";
+    return parseResponse(await fetch(url + sep + "_=" + Date.now(), {
+      cache: "no-store"
+    }));
   }
 
-  async function loadPool(){
+  async function apiPost(url, data) {
+    const headers = { "content-type": "application/json" };
+    if ($("adminPin") && $("adminPin").value) {
+      headers["x-admin-pin"] = $("adminPin").value;
+    }
+
+    return parseResponse(await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(data),
+      cache: "no-store"
+    }));
+  }
+
+  async function loadPool() {
     try {
       pool = await apiGet("/api/pool");
+
       if ($("feePerGroup")) $("feePerGroup").value = pool.feePerGroup ?? 20;
       if ($("missedCutPenalty")) $("missedCutPenalty").value = pool.missedCutPenalty ?? 10;
       if ($("withdrawnPenalty")) $("withdrawnPenalty").value = pool.withdrawnPenalty ?? 15;
+
       setDebug(`Pool loaded: ${(pool.groups || []).length} group(s), updated ${pool.updatedAt ? new Date(pool.updatedAt).toLocaleString() : "not yet saved"}`);
     } catch (e) {
       console.warn("Pool load failed:", e);
@@ -46,9 +115,10 @@
     }
   }
 
-  async function loadLive(){
+  async function loadLive() {
     setText("feedStatus", "Loading feed…");
     setText("lastUpdated", "Calling /api/live-leaderboard");
+
     try {
       live = await apiGet("/api/live-leaderboard");
       setText("feedStatus", `${live.provider || "demo"} feed`);
@@ -60,96 +130,161 @@
     }
   }
 
-  function gmap(){ const m = new Map(); (live.players || []).forEach(p => m.set(key(p.name), p)); return m; }
-  function eff(name){
-    const p = gmap().get(key(name));
-    if (!p) return { name, total: 0, status: "Not Found", thru: "—" };
+  function golferMap() {
+    const m = new Map();
+    (live.players || []).forEach(p => m.set(key(p.name), p));
+    return m;
+  }
+
+  function effectiveGolfer(name) {
+    const p = golferMap().get(key(name));
+
+    if (!p) {
+      return {
+        name,
+        total: 0,
+        status: "Not Found",
+        thru: "—"
+      };
+    }
+
     let total = Number(p.total || 0);
+
     if (p.status === "Missed Cut") total += Number(pool.missedCutPenalty || 10);
     if (p.status === "Withdrawn") total += Number(pool.withdrawnPenalty || 15);
+
     return { ...p, total };
   }
 
-  function rows(){
+  function leaderboardRows() {
     return (pool.groups || []).map((g, i) => {
-      const golfers = (g.golfers || []).map(eff);
-      const total = golfers.reduce((s,p) => s + Number(p.total || 0), 0);
+      const golfers = (g.golfers || []).map(effectiveGolfer);
+      const total = golfers.reduce((sum, p) => sum + Number(p.total || 0), 0);
       const risk = golfers.filter(p => ["Missed Cut", "Withdrawn", "Not Found"].includes(p.status)).length;
-      return { ...g, i, golfers, total, risk };
-    }).sort((a,b) => a.total - b.total || String(a.entrant).localeCompare(String(b.entrant)));
+
+      return {
+        ...g,
+        i,
+        golfers,
+        total,
+        risk
+      };
+    }).sort((a, b) => a.total - b.total || String(a.entrant).localeCompare(String(b.entrant)));
   }
 
-  function renderDash(r){
-    const l = r[0];
-    setText("leaderName", l ? `${l.entrant} - ${l.label}` : "—");
-    setText("leaderScore", l ? scoreText(l.total) : "—");
+  function renderDashboard(rows) {
+    const leader = rows[0];
+
+    setText("leaderName", leader ? `${leader.entrant} - ${leader.label}` : "—");
+    setText("leaderScore", leader ? scoreText(leader.total) : "—");
     setText("groupCount", (pool.groups || []).length);
     setText("prizePool", money((pool.groups || []).length * Number(pool.feePerGroup || 20)));
   }
 
-  function renderBoard(){
+  function renderLeaderboard() {
     const body = $("leaderboardBody");
     if (!body) return;
-    const r = rows();
-    renderDash(r);
-    body.innerHTML = r.map((g,i) => `<tr class="${i===0 ? "leader" : g.risk ? "risk" : ""}">
-      <td><strong>${i+1}</strong></td>
-      <td><strong>${html(g.entrant)}</strong><br><span class="muted">${html(g.label || "Group " + (g.i+1))}</span></td>
-      <td class="${scoreClass(g.total)}">${scoreText(g.total)}</td>
-      <td>${g.golfers.map(p => `<div>${html(p.name)} <span class="${scoreClass(p.total)}">${scoreText(p.total)}</span> <span class="muted">${html(p.status)} • thru ${html(p.thru)}</span></div>`).join("")}</td>
-      <td>${g.risk}</td>
-    </tr>`).join("") || `<tr><td colspan="5" class="muted">No groups entered yet.</td></tr>`;
+
+    const rows = leaderboardRows();
+    renderDashboard(rows);
+
+    body.innerHTML = rows.map((g, i) => `
+      <tr class="${i === 0 ? "leader" : g.risk ? "risk" : ""}">
+        <td><strong>${i + 1}</strong></td>
+        <td>
+          <strong>${html(g.entrant)}</strong><br>
+          <span class="muted">${html(g.label || "Group " + (g.i + 1))}</span>
+        </td>
+        <td class="${scoreClass(g.total)}">${scoreText(g.total)}</td>
+        <td>
+          ${g.golfers.map(p => `
+            <div>
+              ${html(p.name)}
+              <span class="${scoreClass(p.total)}">${scoreText(p.total)}</span>
+              <span class="muted">${html(p.status)} • thru ${html(p.thru)}</span>
+            </div>
+          `).join("")}
+        </td>
+        <td>${g.risk}</td>
+      </tr>
+    `).join("") || `<tr><td colspan="5" class="muted">No groups entered yet.</td></tr>`;
   }
 
-  function renderGolfers(){
+  function renderGolfers() {
     const body = $("golferBody");
     if (!body) return;
-    body.innerHTML = (live.players || []).map(p => `<tr>
-      <td>${html(p.position || "—")}</td>
-      <td><strong>${html(p.name)}</strong></td>
-      <td class="${scoreClass(p.total)}">${scoreText(p.total)}</td>
-      <td>${html(p.thru || "—")}</td>
-      <td><span class="pill">${html(p.status || "Active")}</span></td>
-    </tr>`).join("") || `<tr><td colspan="5" class="muted">No scores loaded.</td></tr>`;
+
+    body.innerHTML = (live.players || []).map(p => `
+      <tr>
+        <td>${html(p.position || "—")}</td>
+        <td><strong>${html(p.name)}</strong></td>
+        <td class="${scoreClass(p.total)}">${scoreText(p.total)}</td>
+        <td>${html(p.thru || "—")}</td>
+        <td><span class="pill">${html(p.status || "Active")}</span></td>
+      </tr>
+    `).join("") || `<tr><td colspan="5" class="muted">No scores loaded.</td></tr>`;
   }
 
-  function renderGroups(){
+  function renderGroups() {
     const list = $("groupsList");
     if (!list) return;
-    list.innerHTML = (pool.groups || []).map((g,i) => `<div class="group-card">
-      <strong>${html(g.entrant)} - ${html(g.label || "Group " + (i+1))}</strong>
-      <button class="danger" onclick="window.removeGroup(${i})">Remove</button>
-      <ul>${(g.golfers || []).map(x => `<li>${html(x)}</li>`).join("")}</ul>
-    </div>`).join("") || `<p class="muted">No groups saved.</p>`;
+
+    list.innerHTML = (pool.groups || []).map((g, i) => `
+      <div class="group-card">
+        <strong>${html(g.entrant)} - ${html(g.label || "Group " + (i + 1))}</strong>
+        <button class="danger" onclick="window.removeGroup(${i})">Remove</button>
+        <ul>
+          ${(g.golfers || []).map(x => `<li>${html(x)}</li>`).join("")}
+        </ul>
+      </div>
+    `).join("") || `<p class="muted">No groups saved.</p>`;
   }
 
-  function render(){ renderBoard(); renderGolfers(); renderGroups(); }
+  function render() {
+    renderLeaderboard();
+    renderGolfers();
+    renderGroups();
+  }
 
-  function addGroup(){
+  function addGroup() {
     const entrant = norm($("entrantName")?.value);
     const golfers = ($("golfers")?.value || "").split(/\n|,/).map(norm).filter(Boolean);
+
     if (!entrant) return show("Enter the entrant name.", true);
     if (golfers.length !== 4) return show("Each paid group must have exactly 4 golfers.", true);
-    const label = norm($("groupLabel")?.value) || `Group ${(pool.groups || []).filter(g => g.entrant === entrant).length + 1}`;
+
+    const label = norm($("groupLabel")?.value) ||
+      `Group ${(pool.groups || []).filter(g => g.entrant === entrant).length + 1}`;
+
     pool.groups = pool.groups || [];
-    pool.groups.push({ id: String(Date.now()), entrant, label, golfers });
-    $("entrantName").value = ""; $("groupLabel").value = ""; $("golfers").value = "";
+    pool.groups.push({
+      id: String(Date.now()),
+      entrant,
+      label,
+      golfers
+    });
+
+    $("entrantName").value = "";
+    $("groupLabel").value = "";
+    $("golfers").value = "";
+
     show("Group added. Click Save Pool to publish it.");
     render();
   }
 
-  window.removeGroup = function(i){
+  window.removeGroup = function(i) {
     if (!confirm("Remove this group?")) return;
     pool.groups.splice(i, 1);
     show("Group removed. Click Save Pool to publish it.");
     render();
   };
 
-  async function savePool(){
+  async function savePool() {
     pool.feePerGroup = Number($("feePerGroup")?.value || 20);
     pool.missedCutPenalty = Number($("missedCutPenalty")?.value || 10);
     pool.withdrawnPenalty = Number($("withdrawnPenalty")?.value || 15);
     pool.golfersPerGroup = 4;
+
     try {
       pool = await apiPost("/api/pool", pool);
       show("Pool saved successfully.");
@@ -161,30 +296,197 @@
     }
   }
 
-  function clearGroups(){
-    if (!confirm("Clear groups on screen? Click Save Pool afterward.")) return;
+  function clearGroups() {
+    if (!confirm("Clear groups on screen? Click Save Pool afterward to publish the change.")) return;
     pool.groups = [];
+    show("Groups cleared on screen. Click Save Pool to publish the change.");
     render();
   }
 
-  async function reloadAll(){
+  async function reloadAll() {
     setDebug("Force reload started...");
     await loadLive();
     await loadPool();
     render();
   }
 
-  async function init(){
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
+
+      if (c === '"' && inQuotes && next === '"') {
+        field += '"';
+        i++;
+      } else if (c === '"') {
+        inQuotes = !inQuotes;
+      } else if (c === "," && !inQuotes) {
+        row.push(field);
+        field = "";
+      } else if ((c === "\n" || c === "\r") && !inQuotes) {
+        if (field || row.length) {
+          row.push(field);
+          rows.push(row);
+        }
+        field = "";
+        row = [];
+        if (c === "\r" && next === "\n") i++;
+      } else {
+        field += c;
+      }
+    }
+
+    if (field || row.length) {
+      row.push(field);
+      rows.push(row);
+    }
+
+    return rows;
+  }
+
+  function csvEscape(value) {
+    const s = String(value ?? "");
+    if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+      return '"' + s.replaceAll('"', '""') + '"';
+    }
+    return s;
+  }
+
+  function uploadEntrantGroupsCsv(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const rows = parseCsv(reader.result);
+
+      if (!rows.length) {
+        show("CSV file is empty.", true);
+        return;
+      }
+
+      const header = rows[0].map(h => h.trim().toLowerCase());
+
+      const getValue = (row, columnName) => {
+        const idx = header.indexOf(columnName);
+        return idx >= 0 ? String(row[idx] || "").trim() : "";
+      };
+
+      const importedGroups = [];
+      const skippedRows = [];
+
+      for (const [rowIndex, row] of rows.slice(1).entries()) {
+        const entrant = getValue(row, "entrant") || getValue(row, "name");
+        const groupLabel =
+          getValue(row, "group_label") ||
+          getValue(row, "group") ||
+          getValue(row, "label");
+
+        const golfers = [
+          getValue(row, "golfer1"),
+          getValue(row, "golfer2"),
+          getValue(row, "golfer3"),
+          getValue(row, "golfer4")
+        ].map(norm).filter(Boolean);
+
+        if (!entrant || golfers.length !== 4) {
+          skippedRows.push(rowIndex + 2);
+          continue;
+        }
+
+        importedGroups.push({
+          id: String(Date.now()) + "-" + Math.random().toString(36).slice(2),
+          entrant: norm(entrant),
+          label: norm(groupLabel) || `Group ${importedGroups.length + 1}`,
+          golfers
+        });
+      }
+
+      if (!importedGroups.length) {
+        show("No valid 4-player groups were found in the CSV.", true);
+        return;
+      }
+
+      pool.groups = pool.groups || [];
+      pool.groups.push(...importedGroups);
+
+      const skipText = skippedRows.length ? ` Skipped row(s): ${skippedRows.join(", ")}.` : "";
+      show(`${importedGroups.length} group(s) imported from CSV. Click Save Pool to publish them.${skipText}`);
+      setDebug(`CSV import complete: ${importedGroups.length} group(s).`);
+      render();
+
+      event.target.value = "";
+    };
+
+    reader.readAsText(file);
+  }
+
+  function downloadCsv(filename, text) {
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadTemplate() {
+    const lines = [
+      ["entrant", "group_label", "golfer1", "golfer2", "golfer3", "golfer4"],
+      ["Joe Brown", "Group 1", "Scottie Scheffler", "Rory McIlroy", "Xander Schauffele", "Collin Morikawa"],
+      ["Joe Brown", "Group 2", "Ludvig Aberg", "Brooks Koepka", "Bryson DeChambeau", "Viktor Hovland"],
+      ["Randy", "Group 1", "Patrick Cantlay", "Tommy Fleetwood", "Max Homa", "Jon Rahm"]
+    ].map(row => row.map(csvEscape).join(",")).join("\n");
+
+    downloadCsv("us_open_pool_entrants_template.csv", lines);
+  }
+
+  function exportCurrentGroupsCsv() {
+    const header = ["entrant", "group_label", "golfer1", "golfer2", "golfer3", "golfer4"];
+    const rows = [header];
+
+    (pool.groups || []).forEach(g => {
+      rows.push([
+        g.entrant || "",
+        g.label || "",
+        (g.golfers || [])[0] || "",
+        (g.golfers || [])[1] || "",
+        (g.golfers || [])[2] || "",
+        (g.golfers || [])[3] || ""
+      ]);
+    });
+
+    downloadCsv("us_open_pool_current_groups.csv", rows.map(row => row.map(csvEscape).join(",")).join("\n"));
+  }
+
+  async function init() {
     setDebug("Script loaded. Initializing...");
+
     if ($("addGroup")) $("addGroup").onclick = addGroup;
     if ($("savePool")) $("savePool").onclick = savePool;
     if ($("clearGroups")) $("clearGroups").onclick = clearGroups;
     if ($("refreshNow")) $("refreshNow").onclick = async () => { await loadLive(); render(); };
     if ($("forceReload")) $("forceReload").onclick = reloadAll;
+    if ($("csvUpload")) $("csvUpload").addEventListener("change", uploadEntrantGroupsCsv);
+    if ($("downloadTemplate")) $("downloadTemplate").onclick = downloadTemplate;
+    if ($("exportCsv")) $("exportCsv").onclick = exportCurrentGroupsCsv;
+
     await reloadAll();
     setInterval(reloadAll, 60000);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
