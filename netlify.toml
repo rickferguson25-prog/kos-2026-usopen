@@ -5,3 +5,18 @@
 
 [functions]
   node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/pool"
+  to = "/.netlify/functions/pool"
+  status = 200
+
+[[redirects]]
+  from = "/api/live-leaderboard"
+  to = "/.netlify/functions/live-leaderboard"
+  status = 200
+
+[[redirects]]
+  from = "/api/settings"
+  to = "/.netlify/functions/settings"
+  status = 200

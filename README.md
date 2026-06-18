@@ -1,34 +1,22 @@
-# 2026 U.S. Open Golf Pool Live App
+# 2026 U.S. Open Golf Pool - Manual Blobs Credentials Patch
 
-This patched version uses Netlify Functions 2.0 syntax (`export default` with `Response`) so Netlify Blobs can be automatically configured in the runtime.
+This version fixes MissingBlobsEnvironmentError by explicitly passing siteID and token to Netlify Blobs.
 
-## Deploy
+Required environment variables:
 
-Repo root must contain:
-
-- package.json
-- netlify.toml
-- public/
-- netlify/functions/
-
-Netlify settings:
-
-- Build command: `npm run build`
-- Publish directory: `public`
-- Functions directory: `netlify/functions`
-
-Environment variables:
-
-```env
 ADMIN_PIN=your-private-pin
 LIVE_GOLF_PROVIDER=demo
 CACHE_SECONDS=60
 REFRESH_SECONDS=60
-```
+NETLIFY_BLOBS_SITE_ID=your-site-id
+NETLIFY_BLOBS_TOKEN=your-personal-access-token
 
-After changing the files, redeploy with **Clear cache and deploy site**.
+Find Site ID in Netlify: Site configuration > General > Site details > Site ID.
+Create token in Netlify: User settings > Applications > Personal access tokens.
 
-Test:
+Deploy settings:
+Build command: npm run build
+Publish directory: public
+Functions directory: netlify/functions
 
-- `/api/pool` should return JSON.
-- `/api/live-leaderboard` should return demo leaderboard JSON.
+After adding variables, use Trigger deploy > Clear cache and deploy site.

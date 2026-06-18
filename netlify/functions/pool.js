@@ -18,6 +18,17 @@ function send(statusCode, body) {
   };
 }
 
+function getPoolStore() {
+  const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_AUTH_TOKEN;
+
+  if (siteID && token) {
+    return getStore({ name: "us-open-golf-pool", siteID, token });
+  }
+
+  return getStore("us-open-golf-pool");
+}
+
 function authorized(event) {
   const requiredPin = process.env.ADMIN_PIN || "";
   if (!requiredPin) return true;
@@ -27,7 +38,7 @@ function authorized(event) {
 
 exports.handler = async function(event) {
   try {
-    const store = getStore("us-open-golf-pool");
+    const store = getPoolStore();
     const current = await store.get("pool", { type: "json" }) || defaultPool;
 
     if (event.httpMethod === "GET") return send(200, current);
@@ -61,6 +72,10 @@ exports.handler = async function(event) {
 
     return send(405, { error: "Method not allowed." });
   } catch (err) {
-    return send(500, { error: "Save failed inside Netlify function.", detail: err.message });
+    return send(500, {
+      error: "Save failed inside Netlify function.",
+      detail: err.message,
+      expectedFix: "Add NETLIFY_BLOBS_SITE_ID and NETLIFY_BLOBS_TOKEN environment variables, then clear cache and redeploy."
+    });
   }
 };
