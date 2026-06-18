@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "v108";
+  const VERSION = "v109";
   console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
   let pool = {
@@ -22,6 +22,10 @@
 
   function norm(v) {
     return String(v || "").trim().replace(/\s+/g, " ");
+  }
+
+  function normalizeHeaderName(v) {
+    return String(v || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
   }
 
   function key(v) {
@@ -428,28 +432,28 @@
         return;
       }
 
-      const header = rows[0].map(h => h.trim().toLowerCase());
+      const header = rows[0].map(normalizeHeaderName);
 
-      const getValue = (row, columnName) => {
-        const idx = header.indexOf(columnName);
-        return idx >= 0 ? String(row[idx] || "").trim() : "";
+      const getValue = (row, ...columnNames) => {
+        for (const columnName of columnNames) {
+          const idx = header.indexOf(normalizeHeaderName(columnName));
+          if (idx >= 0) return String(row[idx] || "").trim();
+        }
+        return "";
       };
 
       const importedGroups = [];
       const skippedRows = [];
 
       for (const [rowIndex, row] of rows.slice(1).entries()) {
-        const entrant = getValue(row, "entrant") || getValue(row, "name");
-        const groupLabel =
-          getValue(row, "group_label") ||
-          getValue(row, "group") ||
-          getValue(row, "label");
+        const entrant = getValue(row, "entrant", "name");
+        const groupLabel = getValue(row, "group_label", "groupLabel", "group label", "group", "label");
 
         const golfers = [
-          getValue(row, "golfer1"),
-          getValue(row, "golfer2"),
-          getValue(row, "golfer3"),
-          getValue(row, "golfer4")
+          getValue(row, "golfer1", "golfer_1", "golfer 1"),
+          getValue(row, "golfer2", "golfer_2", "golfer 2"),
+          getValue(row, "golfer3", "golfer_3", "golfer 3"),
+          getValue(row, "golfer4", "golfer_4", "golfer 4")
         ].map(norm).filter(Boolean);
 
         if (!entrant || golfers.length !== 4) {
@@ -529,6 +533,34 @@
     downloadCsv("us_open_pool_current_groups.csv", rows.map(row => row.map(csvEscape).join(",")).join("\n"));
   }
 
+  function setupRiskInfoPanel() {
+    const btn = $("riskInfoBtn");
+    const panel = $("riskInfoPanel");
+    if (!btn || !panel) return;
+
+    const closePanel = () => {
+      panel.hidden = true;
+      btn.setAttribute("aria-expanded", "false");
+    };
+
+    btn.addEventListener("click", event => {
+      event.stopPropagation();
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      btn.setAttribute("aria-expanded", opening ? "true" : "false");
+    });
+
+    document.addEventListener("click", event => {
+      if (!panel.hidden && !panel.contains(event.target) && event.target !== btn) {
+        closePanel();
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closePanel();
+    });
+  }
+
   async function init() {
     setDebug("Script loaded. Initializing...");
 
@@ -540,6 +572,7 @@
     }
 
     updateAdminAvailability();
+    setupRiskInfoPanel();
 
     if ($("addGroup")) $("addGroup").onclick = addGroup;
     if ($("savePool")) $("savePool").onclick = () => savePool();

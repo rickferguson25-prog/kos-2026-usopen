@@ -4,15 +4,15 @@ Complete replacement repo for the Netlify app.
 
 ## Version
 
-v108
+v109
 
 ## Changes in this version
 
 - Admin functions are unavailable until an Admin PIN is entered: CSV upload, Add Group, Save Pool, Clear Groups, Remove, fee/penalty fields.
 - The Admin PIN is still verified by the Netlify function when Save Pool/CSV upload saves.
-- Added a hover/focus bubble explaining Risk.
+- Replaced the Risk hover/focus bubble with a click/tap info button that works in Chrome and mobile browsers.
 - Risk means the number of golfers in the group with status Missed Cut, Withdrawn, or Not Found.
-- Group labels from CSV upload are preserved exactly.
+- Group labels from CSV upload are preserved exactly, including camelCase header `groupLabel`.
 - The Pool Leaderboard no longer auto-increments missing/displayed group numbers.
 - Missing group labels display as "Unlabeled Group" instead of Group 1, Group 2, etc.
 
@@ -75,3 +75,16 @@ https://your-site-name.netlify.app/?v=108
 /api/live-leaderboard
 /app.js?v=108
 /assets/KOS_Logo.jpeg?v=108
+
+
+## CSV header compatibility
+
+This version accepts any of these group label headers:
+
+- group_label
+- groupLabel
+- group label
+- group
+- label
+
+The uploaded value is displayed exactly on the leaderboard.

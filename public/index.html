@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Kings of Swing Golf Pool</title>
-  <link rel="stylesheet" href="/styles.css?v=108"/>
+  <link rel="stylesheet" href="/styles.css?v=109"/>
 </head>
 <body>
 <header class="hero">
@@ -31,7 +31,7 @@
 
   <section class="card debug-card">
     <button id="forceReload">Force Reload Pool + Scores</button>
-    <p id="debugLine">App version v108 loading…</p>
+    <p id="debugLine">App version v109 loading…</p>
   </section>
 
   <section class="card">
@@ -52,9 +52,10 @@
             <th>Golfers</th>
             <th class="risk-heading">
               Risk
-              <span class="tooltip" tabindex="0" aria-label="Risk explanation">?
-                <span class="tooltip-text">Risk is the number of golfers in this group who are not currently safe because they are marked Missed Cut, Withdrawn, or Not Found in the live feed.</span>
-              </span>
+              <button id="riskInfoBtn" class="info-button" type="button" aria-expanded="false" aria-controls="riskInfoPanel">?</button>
+              <div id="riskInfoPanel" class="risk-info-panel" hidden>
+                Risk is the number of golfers in this group who are marked <strong>Missed Cut</strong>, <strong>Withdrawn</strong>, or <strong>Not Found</strong> in the live feed.
+              </div>
             </th>
           </tr>
         </thead>
@@ -144,13 +145,13 @@
 </main>
 
 <footer>
-  <img src="/assets/KOS_Logo.jpeg?v=108" alt="Kings of Swing logo" class="footer-logo"/>
+  <img src="/assets/KOS_Logo.jpeg?v=109" alt="Kings of Swing logo" class="footer-logo"/>
   <div>
     <strong>Kings of Swing Golf Group</strong>
     <span>Powered by TRG</span>
   </div>
 </footer>
 
-<script src="/app.js?v=108" defer></script>
+<script src="/app.js?v=109" defer></script>
 </body>
 </html>
