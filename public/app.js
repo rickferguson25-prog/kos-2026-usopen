@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "v110";
+  const VERSION = "v111";
   console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
   let pool = {
@@ -29,7 +29,58 @@
   }
 
   function key(v) {
-    return norm(v).toLowerCase().replace(/[.'’]/g, "");
+    return norm(v)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/&/g, "and")
+      .replace(/[.'’,-]/g, "")
+      .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function nameParts(v) {
+    const parts = key(v).split(" ").filter(Boolean);
+    return {
+      parts,
+      first: parts[0] || "",
+      last: parts[parts.length - 1] || ""
+    };
+  }
+
+  function findLivePlayer(poolGolferName) {
+    const poolKey = key(poolGolferName);
+    const poolParts = nameParts(poolGolferName);
+    const players = live.players || [];
+
+    if (!poolKey || !players.length) return null;
+
+    // 1. Exact normalized full-name match.
+    let match = players.find(p => key(p.name) === poolKey);
+    if (match) return match;
+
+    // 2. Contains match, useful when feed includes country/suffix/extra text.
+    match = players.find(p => {
+      const liveKey = key(p.name);
+      return liveKey && (liveKey.includes(poolKey) || poolKey.includes(liveKey));
+    });
+    if (match) return match;
+
+    // 3. Last name + first initial match.
+    const lastInitialMatches = players.filter(p => {
+      const lp = nameParts(p.name);
+      if (!lp.last || lp.last !== poolParts.last) return false;
+      if (!poolParts.first || !lp.first) return true;
+      return lp.first[0] === poolParts.first[0] || lp.first === poolParts.first;
+    });
+    if (lastInitialMatches.length === 1) return lastInitialMatches[0];
+
+    // 4. Unique last-name match.
+    const lastOnlyMatches = players.filter(p => nameParts(p.name).last === poolParts.last);
+    if (lastOnlyMatches.length === 1) return lastOnlyMatches[0];
+
+    return null;
   }
 
   function money(n) {
@@ -170,7 +221,9 @@
   }
 
   function effectiveGolfer(name) {
-    const p = findLivePlayer(name);
+    const p = (typeof findLivePlayer === "function")
+      ? findLivePlayer(name)
+      : (live.players || []).find(x => key(x.name) === key(name));
 
     if (!p) {
       return { name, total: 0, status: "Not Found", thru: "—" };
