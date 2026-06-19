@@ -83,7 +83,20 @@ function rowScore(row) {
   return firstValue(row, ["total", "Total", "score", "Score", "to_par", "toPar", "ToPar", "total_to_par", "totalToPar", "TotalToPar", "total_score", "totalScore", "TotalScore", "tournament_score", "TournamentScore", "result.total", "result.score", "result.to_par", "result.toPar", "scores.total", "scores.score", "scores.to_par", "scores.toPar", "leaderboard.total", "leaderboard.score"]);
 }
 function rowThru(row) {
-  return firstValue(row, ["thru", "Thru", "holes", "Holes", "holes_thru", "holesThru", "HolesThrough", "current_hole", "currentHole", "CurrentHole", "round.holes", "round.thru", "scores.thru", "scores.holes", "today.thru"]) || "—";
+  const value = firstValue(row, [
+    "holes_played", "holesPlayed", "HolesPlayed",
+    "holes_played_today", "holesPlayedToday", "HolesPlayedToday",
+    "thru", "Thru", "holes", "Holes", "holes_thru", "holesThru", "HolesThrough",
+    "current_hole", "currentHole", "CurrentHole",
+    "round.holes_played", "round.holesPlayed", "round.HolesPlayed",
+    "round.holes", "round.thru",
+    "scores.holes_played", "scores.holesPlayed", "scores.HolesPlayed",
+    "scores.thru", "scores.holes",
+    "today.holes_played", "today.holesPlayed", "today.thru"
+  ]);
+
+  if (value === 0 || value === "0") return "0";
+  return value || "—";
 }
 function rowPosition(row, index) {
   return firstValue(row, ["position", "Position", "rank", "Rank", "pos", "Pos", "place", "Place", "leaderboard.position", "result.position"]) || String(index + 1);
