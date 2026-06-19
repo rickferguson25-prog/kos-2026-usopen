@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "v109";
+  const VERSION = "v110";
   console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
   let pool = {
@@ -169,29 +169,16 @@
     }
   }
 
-  function golferMap() {
-    const m = new Map();
-    (live.players || []).forEach(p => m.set(key(p.name), p));
-    return m;
-  }
-
   function effectiveGolfer(name) {
-    const p = golferMap().get(key(name));
+    const p = findLivePlayer(name);
 
     if (!p) {
-      return {
-        name,
-        total: 0,
-        status: "Not Found",
-        thru: "—"
-      };
+      return { name, total: 0, status: "Not Found", thru: "—" };
     }
 
     let total = Number(p.total || 0);
-
     if (p.status === "Missed Cut") total += Number(pool.missedCutPenalty || 10);
     if (p.status === "Withdrawn") total += Number(pool.withdrawnPenalty || 15);
-
     return { ...p, total };
   }
 

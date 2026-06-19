@@ -4,7 +4,7 @@ Complete replacement repo for the Netlify app.
 
 ## Version
 
-v109
+v110
 
 ## Changes in this version
 
@@ -88,3 +88,10 @@ This version accepts any of these group label headers:
 - label
 
 The uploaded value is displayed exactly on the leaderboard.
+
+
+## Changes in v110
+
+- Stronger RapidAPI normalizer for Golf Leaderboard Data responses.
+- More flexible golfer name matching: exact full name, partial/contains matching, last name + first initial, and unique last-name match.
+- /api/live-leaderboard now returns debug.playerCount and top-level keys so you can confirm whether the live feed produced usable player rows.

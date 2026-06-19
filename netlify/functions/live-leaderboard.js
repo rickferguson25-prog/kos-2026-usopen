@@ -14,161 +14,140 @@ function send(statusCode, body, maxAge = 0) {
 function score(value) {
   if (value === null || value === undefined || value === "") return 0;
   if (typeof value === "number") return value;
-
   const s = String(value).trim().toUpperCase();
-  if (s === "E" || s === "EVEN") return 0;
+  if (s === "E" || s === "EVEN" || s === "PAR" || s === "-") return 0;
+  const n = Number(s.replace("+", ""));
+  return Number.isFinite(n) ? n : 0;
+}
 
-  return Number(s.replace("+", "")) || 0;
+function getPath(obj, path) {
+  return path.split(".").reduce((acc, part) => acc && acc[part], obj);
+}
+
+function firstValue(obj, paths) {
+  for (const path of paths) {
+    const value = getPath(obj, path);
+    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+  }
+  return "";
+}
+
+function fullNameFrom(obj) {
+  if (!obj || typeof obj !== "object") return "";
+  const direct = firstValue(obj, [
+    "name", "Name", "full_name", "FullName", "fullName", "player_name", "PlayerName", "playerName",
+    "display_name", "displayName", "DisplayName", "participant_name", "participantName", "competitor_name", "competitorName",
+    "golfer", "Golfer", "golfer_name", "golferName"
+  ]);
+  if (direct) return String(direct).trim();
+  for (const k of ["player", "Player", "participant", "Participant", "competitor", "Competitor", "athlete", "Athlete", "contestant", "Contestant", "person", "Person", "entry", "Entry"]) {
+    if (obj[k] && typeof obj[k] === "object") {
+      const nested = fullNameFrom(obj[k]);
+      if (nested) return nested;
+    }
+  }
+  const first = firstValue(obj, ["first_name", "FirstName", "firstName", "given_name", "givenName", "player.first_name", "player.FirstName", "player.firstName", "Player.FirstName", "participant.firstName", "competitor.firstName"]);
+  const last = firstValue(obj, ["last_name", "LastName", "lastName", "family_name", "familyName", "player.last_name", "player.LastName", "player.lastName", "Player.LastName", "participant.lastName", "competitor.lastName"]);
+  return [first, last].filter(Boolean).join(" ").trim();
 }
 
 function status(p) {
-  const raw = String(p.status || p.Status || p.player_status || p.PlayerStatus || "").toLowerCase();
-
-  if (p.IsWithdrawn || p.withdrawn || raw.includes("withdraw")) return "Withdrawn";
-  if (p.MadeCut === false || p.madeCut === false || raw.includes("missed cut")) return "Missed Cut";
+  const raw = String(firstValue(p, ["status", "Status", "player_status", "PlayerStatus", "playerStatus", "result.status", "scores.status", "current_status", "currentStatus"])).toLowerCase();
+  if (p.IsWithdrawn || p.withdrawn || p.Withdrawn || raw.includes("withdraw") || raw === "wd") return "Withdrawn";
+  if (p.MadeCut === false || p.madeCut === false || raw.includes("missed cut") || raw === "mc") return "Missed Cut";
   if (raw.includes("final") || raw.includes("finish") || raw.includes("complete")) return "Finished";
-
   return "Active";
 }
 
-function name(p) {
-  return p.name || p.Name || p.player_name || p.PlayerName || p.full_name || p.FullName ||
-    [p.FirstName || p.first_name || p.firstName, p.LastName || p.last_name || p.lastName]
-      .filter(Boolean)
-      .join(" ");
+function findCandidateArrays(obj, out = [], path = "root", depth = 0) {
+  if (!obj || depth > 8) return out;
+  if (Array.isArray(obj)) {
+    if (obj.some(item => item && typeof item === "object")) out.push({ path, rows: obj });
+    obj.slice(0, 3).forEach((item, i) => findCandidateArrays(item, out, `${path}[${i}]`, depth + 1));
+    return out;
+  }
+  if (typeof obj === "object") {
+    for (const [k, v] of Object.entries(obj)) findCandidateArrays(v, out, `${path}.${k}`, depth + 1);
+  }
+  return out;
+}
+
+function hasPlayerShape(row) {
+  if (!row || typeof row !== "object") return false;
+  if (fullNameFrom(row)) return true;
+  const keys = JSON.stringify(Object.keys(row).slice(0, 50)).toLowerCase();
+  return keys.includes("player") || keys.includes("golfer") || keys.includes("participant") || keys.includes("competitor");
+}
+
+function rowScore(row) {
+  return firstValue(row, ["total", "Total", "score", "Score", "to_par", "toPar", "ToPar", "total_to_par", "totalToPar", "TotalToPar", "total_score", "totalScore", "TotalScore", "tournament_score", "TournamentScore", "result.total", "result.score", "result.to_par", "result.toPar", "scores.total", "scores.score", "scores.to_par", "scores.toPar", "leaderboard.total", "leaderboard.score"]);
+}
+function rowThru(row) {
+  return firstValue(row, ["thru", "Thru", "holes", "Holes", "holes_thru", "holesThru", "HolesThrough", "current_hole", "currentHole", "CurrentHole", "round.holes", "round.thru", "scores.thru", "scores.holes", "today.thru"]) || "—";
+}
+function rowPosition(row, index) {
+  return firstValue(row, ["position", "Position", "rank", "Rank", "pos", "Pos", "place", "Place", "leaderboard.position", "result.position"]) || String(index + 1);
 }
 
 function normalize(raw) {
-  const arrays = [
-    raw && raw.players,
-    raw && raw.Players,
-    raw && raw.leaderboard,
-    raw && raw.Leaderboard,
-    raw && raw.data,
-    raw && raw.Data,
-    raw && raw.results,
-    raw && raw.Results,
-    raw && raw.TournamentPlayers,
-    raw && raw.leaderboardRows,
-    raw && raw.tournament && raw.tournament.leaderboard
-  ].filter(Array.isArray);
-
-  const rows = arrays[0] || (Array.isArray(raw) ? raw : []);
-
-  return rows.map((p, i) => {
-    const nm = name(p) || `Player ${i + 1}`;
-    const total =
-      p.total ?? p.Total ?? p.Score ?? p.score ?? p.TotalScore ??
-      p.TournamentScore ?? p.ToPar ?? p.to_par ?? p.total_to_par ?? 0;
-
-    return {
-      id: String(p.id || p.ID || p.PlayerID || p.player_id || nm),
-      name: String(nm).trim(),
-      total: score(total),
-      thru: String(p.thru || p.Thru || p.HolesThrough || p.current_hole || p.CurrentHole || "—"),
-      position: String(p.position || p.Position || p.Rank || p.rank || "—"),
-      status: status(p),
-      raw: p
-    };
-  }).filter(p => p.name).sort((a, b) => a.total - b.total);
+  const directArrays = [raw && raw.players, raw && raw.Players, raw && raw.leaderboard, raw && raw.Leaderboard, raw && raw.data, raw && raw.Data, raw && raw.results, raw && raw.Results, raw && raw.TournamentPlayers, raw && raw.leaderboardRows, raw && raw.entries, raw && raw.Entries, raw && raw.participants, raw && raw.Participants, raw && raw.competitors, raw && raw.Competitors, raw && raw.tournament && raw.tournament.leaderboard, raw && raw.fixture && raw.fixture.leaderboard].filter(Array.isArray);
+  let rows = directArrays[0] || (Array.isArray(raw) ? raw : []);
+  if (!rows.length || !rows.some(hasPlayerShape)) {
+    const candidates = findCandidateArrays(raw).map(c => ({ ...c, score: c.rows.filter(hasPlayerShape).length })).filter(c => c.score > 0).sort((a, b) => b.score - a.score);
+    if (candidates.length) rows = candidates[0].rows;
+  }
+  return rows.map((row, i) => {
+    const nm = fullNameFrom(row);
+    if (!nm) return null;
+    return { id: String(firstValue(row, ["id", "ID", "player_id", "playerId", "PlayerID", "player.id", "Player.ID", "participant.id", "competitor.id"]) || nm), name: String(nm).trim(), total: score(rowScore(row)), thru: String(rowThru(row)), position: String(rowPosition(row, i)), status: status(row), raw: row };
+  }).filter(Boolean).sort((a, b) => a.total - b.total);
 }
 
 function demo() {
-  const names = [
-    "Scottie Scheffler", "Rory McIlroy", "Xander Schauffele", "Collin Morikawa",
-    "Ludvig Aberg", "Brooks Koepka", "Bryson DeChambeau", "Viktor Hovland",
-    "Patrick Cantlay", "Tommy Fleetwood", "Max Homa", "Jon Rahm",
-    "Hideki Matsuyama", "Jordan Spieth", "Tony Finau", "Sahith Theegala"
-  ];
-
+  const names = ["Scottie Scheffler", "Rory McIlroy", "Xander Schauffele", "Collin Morikawa", "Ludvig Aberg", "Brooks Koepka", "Bryson DeChambeau", "Viktor Hovland", "Patrick Cantlay", "Tommy Fleetwood", "Max Homa", "Jon Rahm", "Hideki Matsuyama", "Jordan Spieth", "Tony Finau", "Sahith Theegala", "Justin Rose", "Shane Lowry"];
   const now = Date.now();
-
-  const players = names.map((nm, i) => ({
-    id: `demo-${i}`,
-    name: nm,
-    total: Math.round(((i % 7) - 3) + Math.sin(now / 600000 + i) * 2),
-    thru: String((Math.floor(now / 60000) + i) % 18 || 18),
-    position: String(i + 1),
-    status: "Active"
-  })).sort((a, b) => a.total - b.total).map((p, i) => ({
-    ...p,
-    position: String(i + 1)
-  }));
-
-  return {
-    provider: "demo",
-    eventName: "Demo Golf Feed",
-    updatedAt: new Date().toISOString(),
-    players
-  };
+  const players = names.map((nm, i) => ({ id: `demo-${i}`, name: nm, total: Math.round(((i % 7) - 3) + Math.sin(now / 600000 + i) * 2), thru: String((Math.floor(now / 60000) + i) % 18 || 18), position: String(i + 1), status: "Active" })).sort((a, b) => a.total - b.total).map((p, i) => ({ ...p, position: String(i + 1) }));
+  return { provider: "demo", eventName: "Demo Golf Feed", updatedAt: new Date().toISOString(), players };
 }
 
 async function fetchJson(url, options) {
   const r = await fetch(url, options);
-  if (!r.ok) throw new Error(`Feed request failed: ${r.status}`);
-  return r.json();
+  const text = await r.text();
+  if (!r.ok) throw new Error(`Feed request failed: ${r.status}. ${text.slice(0, 250)}`);
+  try { return JSON.parse(text); } catch { throw new Error(`Feed did not return JSON. First 250 chars: ${text.slice(0, 250)}`); }
 }
 
 exports.handler = async function() {
   const ttl = Number(process.env.CACHE_SECONDS || 60);
   const provider = String(process.env.LIVE_GOLF_PROVIDER || "demo").toLowerCase();
-
-  if (cache.data && Date.now() - cache.at < ttl * 1000) {
-    return send(200, { ...cache.data, cached: true }, Math.min(ttl, 60));
-  }
-
+  if (cache.data && Date.now() - cache.at < ttl * 1000) return send(200, { ...cache.data, cached: true }, Math.min(ttl, 60));
   try {
     let data;
-
     if (provider === "custom") {
       if (!process.env.CUSTOM_FEED_URL) throw new Error("CUSTOM_FEED_URL is required.");
       const raw = await fetchJson(process.env.CUSTOM_FEED_URL);
-      data = {
-        provider,
-        eventName: raw.eventName || raw.EventName || "Custom Golf Feed",
-        updatedAt: raw.updatedAt || new Date().toISOString(),
-        players: normalize(raw)
-      };
+      const players = normalize(raw);
+      data = { provider, eventName: raw.eventName || raw.EventName || "Custom Golf Feed", updatedAt: raw.updatedAt || new Date().toISOString(), players, debug: { playerCount: players.length } };
     } else if (provider === "rapidapi") {
-      if (!process.env.RAPIDAPI_URL || !process.env.RAPIDAPI_KEY) {
-        throw new Error("RAPIDAPI_URL and RAPIDAPI_KEY are required.");
-      }
-
+      if (!process.env.RAPIDAPI_URL || !process.env.RAPIDAPI_KEY) throw new Error("RAPIDAPI_URL and RAPIDAPI_KEY are required.");
       const headers = { "x-rapidapi-key": process.env.RAPIDAPI_KEY };
       if (process.env.RAPIDAPI_HOST) headers["x-rapidapi-host"] = process.env.RAPIDAPI_HOST;
-
       const raw = await fetchJson(process.env.RAPIDAPI_URL, { headers });
-      data = {
-        provider,
-        eventName: raw.eventName || raw.EventName || "RapidAPI Golf Feed",
-        updatedAt: raw.updatedAt || new Date().toISOString(),
-        players: normalize(raw)
-      };
+      const players = normalize(raw);
+      data = { provider, eventName: raw.eventName || raw.EventName || raw.name || raw.Name || "RapidAPI Golf Feed", updatedAt: raw.updatedAt || raw.updated || new Date().toISOString(), players, debug: { playerCount: players.length, topLevelKeys: raw && typeof raw === "object" ? Object.keys(raw).slice(0, 20) : [] } };
     } else if (provider === "sportsdataio") {
       if (!process.env.SPORTSDATAIO_URL) throw new Error("SPORTSDATAIO_URL is required.");
-
       const url = new URL(process.env.SPORTSDATAIO_URL);
-      if (process.env.SPORTSDATAIO_KEY && !url.searchParams.has("key")) {
-        url.searchParams.set("key", process.env.SPORTSDATAIO_KEY);
-      }
-
+      if (process.env.SPORTSDATAIO_KEY && !url.searchParams.has("key")) url.searchParams.set("key", process.env.SPORTSDATAIO_KEY);
       const raw = await fetchJson(url.toString());
-      data = {
-        provider,
-        eventName: raw.Name || raw.TournamentName || "SportsDataIO Golf Feed",
-        updatedAt: new Date().toISOString(),
-        players: normalize(raw)
-      };
+      const players = normalize(raw);
+      data = { provider, eventName: raw.Name || raw.TournamentName || "SportsDataIO Golf Feed", updatedAt: new Date().toISOString(), players, debug: { playerCount: players.length } };
     } else {
       data = demo();
     }
-
     cache = { at: Date.now(), data };
     return send(200, data, Math.min(ttl, 60));
   } catch (err) {
-    return send(500, {
-      error: err.message,
-      provider
-    });
+    return send(500, { error: err.message, provider });
   }
 };
