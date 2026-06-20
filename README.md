@@ -4,7 +4,7 @@ Complete replacement repo for the Netlify app.
 
 ## Version
 
-v112
+v113
 
 ## Changes in this version
 
@@ -67,14 +67,14 @@ Netlify -> Deploys -> Trigger deploy -> Clear cache and deploy site
 
 Then open:
 
-https://your-site-name.netlify.app/?v=108
+https://your-site-name.netlify.app/?v=113
 
 ## Test endpoints
 
 /api/pool
 /api/live-leaderboard
-/app.js?v=108
-/assets/KOS_Logo.jpeg?v=108
+/app.js?v=113
+/assets/KOS_Logo.jpeg?v=113
 
 
 ## CSV header compatibility
@@ -90,21 +90,28 @@ This version accepts any of these group label headers:
 The uploaded value is displayed exactly on the leaderboard.
 
 
-## Changes in v112
+## Changes in v113
 
 - Stronger RapidAPI normalizer for Golf Leaderboard Data responses.
 - More flexible golfer name matching: exact full name, partial/contains matching, last name + first initial, and unique last-name match.
 - /api/live-leaderboard now returns debug.playerCount and top-level keys so you can confirm whether the live feed produced usable player rows.
 
 
-## v112 hotfix
+## v113 hotfix
 
 - Fixes JavaScript error: `findLivePlayer is not defined`.
 - Adds `findLivePlayer()` directly in `public/app.js`.
 - Adds a defensive fallback in `effectiveGolfer()` so the leaderboard does not crash.
 
 
-## v112 hotfix
+## v113 hotfix
 
 - Uses `holes_played` from Golf Leaderboard Data for the Thru value.
 - Also supports `holesPlayed`, `HolesPlayed`, and nested versions under `round`, `scores`, and `today`.
+
+
+## v113 hotfix
+
+- Treats RapidAPI `status: "cut"` as `Missed Cut`.
+- Also treats `mc`, `missed cut`, and `did not make cut` style statuses as `Missed Cut`.
+- Missed Cut golfers now count toward Risk and receive the Missed Cut Penalty in group scoring.

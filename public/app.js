@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "v112";
+  const VERSION = "v113";
   console.log("US Open Golf Pool app.js " + VERSION + " loaded");
 
   let pool = {

@@ -52,10 +52,42 @@ function fullNameFrom(obj) {
 }
 
 function status(p) {
-  const raw = String(firstValue(p, ["status", "Status", "player_status", "PlayerStatus", "playerStatus", "result.status", "scores.status", "current_status", "currentStatus"])).toLowerCase();
-  if (p.IsWithdrawn || p.withdrawn || p.Withdrawn || raw.includes("withdraw") || raw === "wd") return "Withdrawn";
-  if (p.MadeCut === false || p.madeCut === false || raw.includes("missed cut") || raw === "mc") return "Missed Cut";
-  if (raw.includes("final") || raw.includes("finish") || raw.includes("complete")) return "Finished";
+  const raw = String(firstValue(p, [
+    "status", "Status", "player_status", "PlayerStatus", "playerStatus",
+    "result.status", "scores.status", "current_status", "currentStatus",
+    "round.status", "today.status", "leaderboard.status"
+  ])).trim().toLowerCase();
+
+  const normalized = raw.replace(/[^a-z]/g, "");
+
+  if (
+    p.IsWithdrawn || p.withdrawn || p.Withdrawn ||
+    ["wd", "w/d", "withdrawn", "withdraw", "withdrew"].includes(raw) ||
+    normalized.includes("withdraw")
+  ) {
+    return "Withdrawn";
+  }
+
+  if (
+    p.MadeCut === false || p.madeCut === false ||
+    ["cut", "mc", "missedcut", "missed cut", "didnotmakecut", "dnmc"].includes(raw) ||
+    normalized === "cut" ||
+    normalized === "mc" ||
+    normalized.includes("missedcut") ||
+    normalized.includes("didnotmakecut")
+  ) {
+    return "Missed Cut";
+  }
+
+  if (
+    ["finished", "finish", "final", "complete", "completed", "done"].includes(raw) ||
+    normalized.includes("finish") ||
+    normalized.includes("complete") ||
+    normalized.includes("final")
+  ) {
+    return "Finished";
+  }
+
   return "Active";
 }
 
